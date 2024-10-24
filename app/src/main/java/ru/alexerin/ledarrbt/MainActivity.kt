@@ -9,22 +9,26 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
-import android.view.View
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+
 
 class MainActivity : AppCompatActivity()
 {
     // Контролы:
     private lateinit var btnFind: ImageButton
     private lateinit var btnConn: ImageButton
+
+    // Для показа списка связанных bt-устройств;
+    private lateinit var resultLauncher: ActivityResultLauncher<Intent>
 
     // Bluetooth:
     private lateinit var bluetoothManager: BluetoothManager
@@ -44,6 +48,22 @@ class MainActivity : AppCompatActivity()
             insets
         }
 
+        // Регистрируем обработчик выбора устройства из списка связанных устройств:
+        resultLauncher = registerForActivityResult( ActivityResultContracts.StartActivityForResult())
+        { result ->
+            if( Activity.RESULT_OK == result.getResultCode() )
+            {
+                val intent = result.data
+                val name = intent!!.getStringExtra("name" )
+                Toast.makeText(this, name, Toast.LENGTH_SHORT ).show()
+            }
+            else
+            {
+                // Если нажать кнопку back:
+                Toast.makeText(this, "Херня", Toast.LENGTH_SHORT ).show()
+            }
+        }
+
         btnFind = findViewById<ImageButton>( R.id.btnFind )
         btnConn = findViewById<ImageButton>( R.id.btnConnect )
 
@@ -51,14 +71,14 @@ class MainActivity : AppCompatActivity()
         bluetoothAdapter = bluetoothManager.getAdapter()
 
         if( false == bluetoothAdapter?.isEnabled )
-            onBtOff();
+            onBtOff()
         else
-            onBtOn();
+            onBtOn()
 
         val filter = IntentFilter( BluetoothDevice.ACTION_ACL_CONNECTED )
-        filter.addAction( BluetoothDevice.ACTION_ACL_DISCONNECTED );
-        filter.addAction( BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED );
-        filter.addAction( BluetoothAdapter.ACTION_STATE_CHANGED );
+        filter.addAction( BluetoothDevice.ACTION_ACL_DISCONNECTED )
+        filter.addAction( BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED )
+        filter.addAction( BluetoothAdapter.ACTION_STATE_CHANGED )
 
         registerReceiver( receiver, filter )
     }
@@ -68,8 +88,7 @@ class MainActivity : AppCompatActivity()
     {
         override fun onReceive( context: Context, intent: Intent )
         {
-            //val action = intent.action
-            when( intent.action /*action*/ )
+            when( intent.action )
             {
                 BluetoothDevice.ACTION_ACL_CONNECTED ->
                 {
@@ -85,7 +104,7 @@ class MainActivity : AppCompatActivity()
                 }
                 BluetoothAdapter.ACTION_STATE_CHANGED ->
                 {
-                    val state = intent.getIntExtra( BluetoothAdapter.EXTRA_STATE, -1 );
+                    val state = intent.getIntExtra( BluetoothAdapter.EXTRA_STATE, -1 )
                     if( BluetoothAdapter.STATE_OFF == state )
                         onBtOff()
                     else
@@ -108,10 +127,13 @@ class MainActivity : AppCompatActivity()
         btnFind.setBackgroundColor( Color.BLUE )
         btnConn.setBackgroundColor( Color.BLUE )
         btnFind.setOnClickListener {
-            Toast.makeText(this, "Find", Toast.LENGTH_SHORT).show()
+            val intent = Intent( this, BTListActivity::class.java)
+            intent.putExtra( "BT_DEVICE_NAME", "aaa" )
+            intent.putExtra( "BT_DEVICE_MAC", "" )
+            resultLauncher.launch( intent )
         }
         btnConn.setOnClickListener {
-            Toast.makeText(this, "Connect", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Connect", Toast.LENGTH_SHORT ).show()
         }
     }
 
